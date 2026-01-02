@@ -1,28 +1,33 @@
-# Telegram Student Verification Bot
+# Telegram SheerID Verification Bot
 
-A Telegram bot for student verification simulation.
+Complete automation bot for SheerID student verification.
 
 ## Features
-- Student information generation
-- University database
-- Verification simulation
-- Health checks for Render.com
-- User statistics
+- ✅ Real SheerID API integration
+- ✅ Automatic student data generation
+- ✅ Student ID card generation with Pillow
+- ✅ Complete form submission
+- ✅ Document upload automation
+- ✅ Web service health checks
+
+## How It Works
+1. User sends SheerID verification link
+2. Bot extracts verification ID
+3. Generates realistic student data
+4. Creates student ID card image
+5. Submits data to SheerID API
+6. Uploads document automatically
 
 ## Deployment on Render
-1. Fork this repository
-2. Create new Web Service on Render
-3. Connect your GitHub repository
-4. Add `BOT_TOKEN` environment variable
-5. Deploy
-
-## Environment Variables
-- `BOT_TOKEN`: Your Telegram bot token from @BotFather
-- `PORT`: 8080 (default)
+1. Connect GitHub repository
+2. Set environment variables:
+   - `BOT_TOKEN`: Telegram bot token
+   - `PORT`: 8080
+3. Deploy as Web Service
 
 ## Commands
 - `/start` - Welcome message
-- `/verify` - Start verification
+- `/verify` - Start real verification
+- `/simulate` - Quick simulation
 - `/help` - Instructions
 - `/status` - Bot status
-- `/mystats` - User statistics
