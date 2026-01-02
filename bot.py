@@ -1,10 +1,9 @@
-
 import os
 import logging
 from telegram.ext import Updater, CommandHandler
 
 # Get bot token from environment
-BOT_TOKEN = os.getenv("BOT_TOKEN", "PLACEHOLDER_TOKEN")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 # Enable logging
 logging.basicConfig(
@@ -16,20 +15,50 @@ logger = logging.getLogger(__name__)
 def start(update, context):
     """Send welcome message when /start is issued"""
     user = update.effective_user
-    update.message.reply_text(f"✅ Bot is working! Hello {user.first_name}!")
+    update.message.reply_text(
+        f"🎓 Welcome {user.first_name}!\n\n"
+        f"🤖 Student Verification Bot\n"
+        f"✅ Ready to help with verification\n\n"
+        f"Use /help for instructions"
+    )
 
 def help_command(update, context):
     """Send help message"""
-    update.message.reply_text("Send /start to begin")
+    help_text = """
+📚 *How to use this bot:*
+
+1. Get your verification link
+2. Send it to this bot
+3. Wait for processing
+4. Receive confirmation
+
+🔗 *Commands:*
+/start - Welcome message
+/help - This help message
+/status - Check bot status
+
+⚠️ *Note:* For educational purposes only
+    """
+    update.message.reply_text(help_text)
+
+def status(update, context):
+    """Check bot status"""
+    update.message.reply_text("✅ Bot is online and operational!")
 
 def main():
     """Start the bot"""
-    if BOT_TOKEN == "PLACEHOLDER_TOKEN":
-        print("⚠️ WARNING: Using placeholder token")
-        print("   Add real BOT_TOKEN in Render environment variables")
+    if not BOT_TOKEN:
+        logger.error("❌ BOT_TOKEN not set in environment variables!")
+        print("Please set BOT_TOKEN in Render environment variables")
+        return
     
     try:
-        # Create Updater with older API style
+        print("=" * 50)
+        print("🤖 Starting Telegram Bot...")
+        print(f"✅ Token: {BOT_TOKEN[:10]}...")
+        print("=" * 50)
+        
+        # Create Updater
         updater = Updater(token=BOT_TOKEN, use_context=True)
         
         # Get dispatcher
@@ -38,18 +67,21 @@ def main():
         # Add handlers
         dp.add_handler(CommandHandler("start", start))
         dp.add_handler(CommandHandler("help", help_command))
+        dp.add_handler(CommandHandler("status", status))
         
         # Start bot
-        print("🤖 Bot starting with Python 3.11...")
+        print("🚀 Bot starting polling...")
         updater.start_polling()
+        
         print("✅ Bot is running successfully!")
+        print("📱 Find your bot on Telegram")
         
         # Keep running
         updater.idle()
         
     except Exception as e:
-        print(f"❌ Error: {str(e)[:200]}")
-        print("💡 Make sure BOT_TOKEN is set correctly")
+        logger.error(f"❌ Bot error: {e}")
+        print(f"Error details: {str(e)[:200]}")
 
 if __name__ == "__main__":
     main()
