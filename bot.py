@@ -1,5 +1,6 @@
 """
 Telegram Student Verification Bot with SheerID API Support
+Fixed Version - No async/await errors
 """
 
 import os
@@ -8,17 +9,14 @@ import threading
 import time
 import re
 import random
-import json
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler, CallbackQueryHandler
 from telegram import Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
-import httpx
 
 # ============ CONFIGURATION ============
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PORT = int(os.getenv("PORT", 8080))
-SHEERID_API_URL = "https://services.sheerid.com/rest/v2"
 
 # Conversation states
 WAITING_FOR_URL, PROCESSING = range(2)
@@ -107,7 +105,7 @@ def generate_student_data():
         "student_id": student_id
     }
 
-# ============ SHEERID API FUNCTIONS ============
+# ============ SHEERID SIMULATION ============
 def extract_verification_id(url):
     """Extract verification ID from SheerID URL"""
     patterns = [
@@ -129,24 +127,18 @@ def check_sheerid_link(url):
     if not verification_id:
         return {"valid": False, "error": "Invalid URL format. No verification ID found."}
     
-    try:
-        # Simulate API check (in real implementation, you would call SheerID API)
-        # For now, we'll simulate a successful check
-        return {
-            "valid": True,
-            "verification_id": verification_id,
-            "url": url
-        }
-    except Exception as e:
-        return {"valid": False, "error": f"API Error: {str(e)}"}
+    # Simulate API check
+    if "sheerid.com" not in url:
+        return {"valid": False, "error": "URL must contain 'sheerid.com'"}
+    
+    return {
+        "valid": True,
+        "verification_id": verification_id,
+        "url": url
+    }
 
 def simulate_sheerid_verification(verification_id, student_data):
     """Simulate SheerID verification process"""
-    # In a real implementation, you would:
-    # 1. Call SheerID API with student data
-    # 2. Handle the response
-    # 3. Return actual result
-    
     # Simulate processing delay
     time.sleep(2)
     
@@ -186,7 +178,6 @@ def start_command(update: Update, context: CallbackContext):
 /start - Show this welcome message
 /verify - Start real verification with SheerID link  
 /simulate - Quick simulation (no link needed)
-/mystats - Your verification statistics
 /help - Get help and instructions
 /status - Check bot status
 
@@ -280,7 +271,7 @@ def handle_verification_link(update: Update, context: CallbackContext):
     processing_msg.edit_text(
         "✅ *Link Verified Successfully!*\n"
         "✅ *Student Information Generated!*\n\n"
-        "🔄 Submitting to SheerID API...",
+        "🔄 Submitting to SheerID...",
         parse_mode=ParseMode.MARKDOWN
     )
     
@@ -318,7 +309,7 @@ def handle_verification_link(update: Update, context: CallbackContext):
         
         keyboard = [
             [InlineKeyboardButton("🔄 New Verification", callback_data="start_real_verify")],
-            [InlineKeyboardButton("📊 My Stats", callback_data="show_stats")]
+            [InlineKeyboardButton("📊 Statistics", callback_data="show_stats")]
         ]
         
     else:
@@ -425,11 +416,18 @@ The link should look like:
         [InlineKeyboardButton("🎮 Quick Simulate", callback_data="quick_simulate")]
     ]
     
-    update.message.reply_text(
-        help_text,
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    if update.message:
+        update.message.reply_text(
+            help_text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    elif update.callback_query:
+        update.callback_query.message.reply_text(
+            help_text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
 def status_command(update: Update, context: CallbackContext):
     """Handle /status command"""
@@ -472,16 +470,71 @@ def cancel_command(update: Update, context: CallbackContext):
 def button_handler(update: Update, context: CallbackContext):
     """Handle inline button presses"""
     query = update.callback_query
-    await query.answer()
     
+    # Answer the callback query
+    query.answer()
+    
+    # Handle different button presses
     if query.data == "start_real_verify":
-        await verify_command(update, context)
+        # Edit the message to show verification instructions
+        query.edit_message_text(
+            "🔗 *Real SheerID Verification*\n\n"
+            "📝 *Please send your SheerID verification link:*\n\n"
+            "The link should look like:\n"
+            "`https://services.sheerid.com/verify/...?verificationId=...`\n\n"
+            "*Or type /cancel to stop*",
+            parse_mode=ParseMode.MARKDOWN
+        )
+        # Return conversation state
+        return WAITING_FOR_URL
+        
     elif query.data == "quick_simulate":
-        await simulate_command(update, context)
+        # Run simulate command
+        simulate_command(update, context)
+        
     elif query.data == "show_help":
-        await help_command(update, context)
+        # Show help
+        help_text = """
+📚 *How to Use This Bot*
+
+🔗 *Real Verification (with SheerID link):*
+1. Get your verification link from the service
+2. Use /verify command
+3. Paste the SheerID link
+4. Bot will process automatically
+
+🎮 *Quick Simulation (without link):*
+1. Use /simulate command
+2. Bot generates test data
+3. See how the process works
+
+⚠️ *Important Notes:*
+• For educational purposes only
+• Use responsibly
+        """
+        query.edit_message_text(help_text, parse_mode=ParseMode.MARKDOWN)
+        
     elif query.data == "main_menu":
-        await start_command(update, context)
+        # Return to main menu
+        start_command(update, context)
+        
+    elif query.data == "show_stats":
+        stats_text = """
+📊 *Statistics Feature Coming Soon!*
+
+🚀 *Currently working on:*
+• Real SheerID link processing
+• Automatic data generation
+• University database
+
+📈 *Planned features:*
+• User verification history
+• Success rate tracking
+• University success rankings
+
+💡 *Use /verify to start a verification now!*
+        """
+        query.edit_message_text(stats_text, parse_mode=ParseMode.MARKDOWN)
 
 # ============ BOT SETUP ============
 def setup_bot():
@@ -502,7 +555,10 @@ def setup_bot():
         
         # Add conversation handler for verification flow
         conv_handler = ConversationHandler(
-            entry_points=[CommandHandler('verify', verify_command)],
+            entry_points=[
+                CommandHandler('verify', verify_command),
+                CallbackQueryHandler(button_handler, pattern='^start_real_verify$')
+            ],
             states={
                 WAITING_FOR_URL: [
                     MessageHandler(Filters.text & ~Filters.command, handle_verification_link),
@@ -519,10 +575,9 @@ def setup_bot():
         dispatcher.add_handler(CommandHandler("simulate", simulate_command))
         dispatcher.add_handler(CommandHandler("help", help_command))
         dispatcher.add_handler(CommandHandler("status", status_command))
-        dispatcher.add_handler(CommandHandler("mystats", help_command))  # Placeholder
         
-        # Add button handler
-        dispatcher.add_handler(CallbackQueryHandler(button_handler))
+        # Add button handler for other buttons
+        dispatcher.add_handler(CallbackQueryHandler(button_handler, pattern='^(quick_simulate|show_help|main_menu|show_stats)$'))
         
         # Add message handler for other messages
         dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, 
