@@ -1,7 +1,7 @@
+
 import os
 import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Updater, CommandHandler
 
 # Get bot token from environment
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PLACEHOLDER_TOKEN")
@@ -13,40 +13,43 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def start(update, context):
     """Send welcome message when /start is issued"""
     user = update.effective_user
-    await update.message.reply_text(f"🚀 Hello {user.first_name}! Bot is working! ✅")
+    update.message.reply_text(f"✅ Bot is working! Hello {user.first_name}!")
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def help_command(update, context):
     """Send help message"""
-    await update.message.reply_text("Help command - Bot is functional!")
+    update.message.reply_text("Send /start to begin")
 
 def main():
     """Start the bot"""
-    if not BOT_TOKEN or BOT_TOKEN == "PLACEHOLDER_TOKEN":
-        print("⚠️ WARNING: Using placeholder token. Bot will not connect to Telegram.")
-        print("   Please add your real BOT_TOKEN in Render environment variables")
+    if BOT_TOKEN == "PLACEHOLDER_TOKEN":
+        print("⚠️ WARNING: Using placeholder token")
+        print("   Add real BOT_TOKEN in Render environment variables")
     
     try:
-        # Create application
-        application = Application.builder().token(BOT_TOKEN).build()
+        # Create Updater with older API style
+        updater = Updater(token=BOT_TOKEN, use_context=True)
+        
+        # Get dispatcher
+        dp = updater.dispatcher
         
         # Add handlers
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("help", help_command))
-        
-        # Simple echo handler
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, 
-            lambda update, context: update.message.reply_text(f"Echo: {update.message.text}")))
+        dp.add_handler(CommandHandler("start", start))
+        dp.add_handler(CommandHandler("help", help_command))
         
         # Start bot
-        print("🤖 Bot starting...")
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
+        print("🤖 Bot starting with Python 3.11...")
+        updater.start_polling()
+        print("✅ Bot is running successfully!")
+        
+        # Keep running
+        updater.idle()
         
     except Exception as e:
-        print(f"❌ Bot error: {e}")
-        print("⚠️ Check your BOT_TOKEN and internet connection")
+        print(f"❌ Error: {str(e)[:200]}")
+        print("💡 Make sure BOT_TOKEN is set correctly")
 
 if __name__ == "__main__":
     main()
